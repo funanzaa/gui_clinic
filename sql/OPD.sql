@@ -1,47 +1,60 @@
-﻿select distinct qr1.person_id, qr1.hn, qr1.clinic, qr1.dateopd, qr1.timeopd, qr1.seq,  qr1.uuc, qr1.detail,
-             qr1.optype,--(case when ('4' and qr1.visit_office_changwat='10')  then '4' else (case when (qr1.CHRGITEM='21') then '4' else qr1.optype end) end) optype, 
-              qr1.typein, qr1.typeout ,qr1.maininscl,qr1.claim_code
-              ,case when qr1.visit_vital_sign_blood_presure <> '' and length(split_part(qr1.visit_vital_sign_blood_presure, '/', 1)) <= 3 
-              			then split_part(qr1.visit_vital_sign_blood_presure, '/', 1) 
-              		when length(split_part(qr1.visit_vital_sign_blood_presure, '/', 1)) > 3 
-              			then '' end as sbp
-              ,case when qr1.visit_vital_sign_blood_presure <> '' and length(split_part(qr1.visit_vital_sign_blood_presure, '/', 2)) <= 3  
-              			then split_part(qr1.visit_vital_sign_blood_presure, '/', 2) 
-              		when length(split_part(qr1.visit_vital_sign_blood_presure, '/', 2)) > 4 
-              			then '' end as dbp
-              ,visit_vital_sign_temperature as btemp
-              ,visit_vital_sign_heart_rate as pr
-              ,visit_vital_sign_respiratory_rate as rr
+select distinct qr1.hn as "HN"
+,qr1.clinic as "CLINIC"
+,qr1.dateopd as "DATEOPD"
+,qr1.timeopd as "TIMEOPD"
+,qr1.seq as "SEQ"
+,qr1.uuc as "UUC"
+--, qr1.detail as "DETAIL"
+,regexp_replace(qr1.detail,E'[\r\n\t]',' ','g') as "DETAIL"
+,qr1.btemp as "BTEMP"
+,qr1.sbp as "SBP"
+,qr1.dbp as "DBP"
+,qr1.pr as "PR"
+,qr1.rr as "RR"
+, qr1.optype as "OPTYPE"
+,qr1.typein as "TYPEIN"
+,qr1.typeout as "TYPEOUT"
 from (
- SELECT  t_visit_id ,person_id, hn, clinic, dateopd, timeopd, seq,  uuc, detail, optype, typein, typeout ,maininscl,visit_office_changwat,diag_icd10_number,diag_icd9_icd9_number,claim_code
-                ,visit_vital_sign_blood_presure,visit_vital_sign_temperature,visit_vital_sign_heart_rate,visit_vital_sign_respiratory_rate
+                SELECT  t_visit_id ,person_id, hn, clinic, dateopd, timeopd, seq,  uuc, btemp,sbp,dbp,pr,rr,detail, optype, typein, typeout ,maininscl,visit_office_changwat,diag_icd10_number,diag_icd9_icd9_number
                 from (
-                
                 SELECT DISTINCT t_visit.t_visit_id ,b_contract_plans.r_rp1853_instype_id,
-                    (case when (t_person.person_pid <> '' and length(t_person.person_pid) =13)
-                    then t_person.person_pid
-               when (t_person.person_pid = '' and t_person_foreigner.passport_no = '' 
-                        and t_person_foreigner.f_person_foreigner_id in ('02','03','04','11','12','13','14','21','22','23'))
-                     then 
-                        lpad(t_patient.patient_hn,13,'0')                                      
-               when (t_person_foreigner.foreigner_no <> '' and length(t_person_foreigner.foreigner_no) =13)
-                     then  t_person_foreigner.foreigner_no
-               else '' end) as PERSON_ID,
+                    (case when (t_health_family.patient_pid <> '' and length(t_health_family.patient_pid) =13)
+                                    then t_health_family.patient_pid
+                               when (t_health_family.patient_pid = '' and t_health_family.passport_no = '' 
+                                        and t_health_family.r_rp1853_foreign_id in ('02','03','04','11','12','13','14','21','22','23'))
+                                     then 
+                                        lpad(t_patient.patient_hn,13,'0')                                      
+                               when (t_health_family.health_family_foreigner_card_no <> '' and length(t_health_family.health_family_foreigner_card_no) =13)
+                                     then  t_health_family.health_family_foreigner_card_no
+                               else '' end) as PERSON_ID,
                     t_patient.patient_hn AS HN
                     ,case when b_report_12files_map_clinic.b_report_12files_std_clinic_id IN ('01','02','03','04','05','06','07','08','09','10','11') 
                           then (t_visit.f_visit_type_id || b_report_12files_map_clinic.b_report_12files_std_clinic_id || '00') 
                           when b_report_12files_map_clinic.b_report_12files_std_clinic_id is null then ''
                           else  (t_visit.f_visit_type_id || '121') end AS CLINIC   
-                    ,case when t_visit.visit_begin_visit_time is not null
-                                then to_char(t_visit.visit_begin_visit_time,'yyyymmdd')
+                    ,case when (length(t_visit.visit_begin_visit_time)>=10)
+                                then to_char(to_date(to_number(
+                                        substr(t_visit.visit_begin_visit_time,1,4),'9999')-543 ||
+                                        substr(t_visit.visit_begin_visit_time,5,6),'yyyy-mm-dd'),'yyyymmdd')
                                 ELSE ''   END AS DATEOPD
-                    ,to_char(t_visit.visit_begin_visit_time,'HH24MI') as TIMEOPD
+                    , substr(visit_begin_visit_time,12,2) || substr(visit_begin_visit_time,15,2) as TIMEOPD
                     ,t_visit.visit_vn AS SEQ	
                     ,case when r_rp1853_instype.maininscl in ('UCS','WEL')
                             then '1'
                             else '2'
                      end as UUC
                      ,(case when (symptom.main_symptom is not null) then replace(symptom.main_symptom,'\n','') else '' end) as DETAIL
+                     ,t_visit_vital_sign.visit_vital_sign_temperature as btemp
+                     ,case when (CHAR_LENGTH(t_visit_vital_sign.visit_vital_sign_blood_presure)) in ('5')
+                     	then substring(t_visit_vital_sign.visit_vital_sign_blood_presure,-3,6)
+                     	else substring(t_visit_vital_sign.visit_vital_sign_blood_presure,-3,7)
+                     end as sbp 
+                     ,case when (CHAR_LENGTH(t_visit_vital_sign.visit_vital_sign_blood_presure)) in ('5')
+                     	then substring(t_visit_vital_sign.visit_vital_sign_blood_presure,4,7)
+                     	else substring(t_visit_vital_sign.visit_vital_sign_blood_presure,5,7)
+                     end as dbp
+                     ,t_visit_vital_sign.visit_vital_sign_heart_rate as pr
+                     ,t_visit_vital_sign.visit_vital_sign_respiratory_rate as rr
                      ,case 
                            -- Case OPTYPE=0 [No case]
 			   -- Case OPTYPE=1	
@@ -122,61 +135,36 @@ from (
                                 when (t_visit.f_visit_ipd_discharge_type_id in ('3')) then '8' 
                                 end)  as TYPEOUT
                      ,r_rp1853_instype.maininscl
-                     ,b_visit_office.visit_office_changwat
-                     ,t_diag_icd10.diag_icd10_number
-                     ,t_diag_icd9.diag_icd9_icd9_number
-                     ,t_opbkk_claim.claim_code 
-                     ,t_visit_vital_sign.visit_vital_sign_blood_presure
-                     ,t_visit_vital_sign.visit_vital_sign_temperature
-                     ,t_visit_vital_sign.visit_vital_sign_heart_rate
-                     ,t_visit_vital_sign.visit_vital_sign_respiratory_rate
+                     ,b_visit_office.visit_office_changwat,t_diag_icd10.diag_icd10_number,t_diag_icd9.diag_icd9_icd9_number    
                 FROM  t_visit
                     INNER JOIN t_patient  ON (t_patient.t_patient_id = t_visit.t_patient_id)
-                    inner join t_person on t_person.t_person_id = t_patient.t_person_id
-                    left join t_person_foreigner ON t_person.t_person_id = t_person_foreigner.t_person_id
+                    INNER join t_health_family on t_patient.t_health_family_id =t_health_family.t_health_family_id
                     LEFT JOIN t_visit_payment ON (t_visit_payment.t_visit_id = t_visit.t_visit_id and t_visit_payment.visit_payment_active = '1'
                         and t_visit_payment.visit_payment_priority = '0')
                     INNER JOIN t_billing_invoice_item ON (t_visit.t_visit_id = t_billing_invoice_item.t_visit_id AND t_billing_invoice_item.billing_invoice_item_active='1' ) 
                     inner JOIN t_order ON (t_order.t_order_id = t_billing_invoice_item.t_order_item_id  and t_billing_invoice_item.billing_invoice_item_active='1')
                     inner join b_item ON b_item.b_item_id = t_order.b_item_id
+                    LEFT JOIN t_visit_vital_sign on  t_visit.t_visit_id = t_visit_vital_sign.t_visit_id 
                     LEFT JOIN b_contract_plans ON t_visit_payment.b_contract_plans_id = b_contract_plans.b_contract_plans_id
                     LEFT JOIN r_rp1853_instype ON b_contract_plans.r_rp1853_instype_id = r_rp1853_instype.id
-                    LEFT JOIN t_diag_icd10  ON (t_diag_icd10.diag_icd10_vn = t_visit.t_visit_id AND t_diag_icd10.f_diag_icd10_type_id = '1')
+                    LEFT JOIN t_diag_icd10  ON (t_diag_icd10.diag_icd10_vn = t_visit.t_visit_id AND t_diag_icd10.f_diag_icd10_type_id = '1' and t_diag_icd10.diag_icd10_active = '1' )
                     LEFT JOIN t_diag_icd9  ON (t_visit.t_visit_id = t_diag_icd9.diag_icd9_vn and t_diag_icd9.f_diagnosis_operation_type_id='1' )
                     LEFT JOIN t_accident  ON (t_accident.t_visit_id = t_visit.t_visit_id)
                     LEFT JOIN t_visit_refer_in_out  ON (t_visit_refer_in_out.t_visit_id = t_visit.t_visit_id)
                     LEFT JOIN b_visit_office on t_visit_refer_in_out.visit_refer_in_out_refer_hospital = b_visit_office.b_visit_office_id
                     LEFT JOIN b_report_12files_map_clinic  ON (t_diag_icd10.b_visit_clinic_id = b_report_12files_map_clinic.b_visit_clinic_id)
-                    left join (select distinct on (t_visit_id) t_visit_id,visit_vital_sign_blood_presure,visit_vital_sign_temperature,visit_vital_sign_heart_rate,visit_vital_sign_respiratory_rate
-				from t_visit_vital_sign
-				where visit_vital_sign_blood_presure <> ''
-		       order by t_visit_id,record_time desc) t_visit_vital_sign on t_visit_vital_sign.t_visit_id = t_visit.t_visit_id 
-                    left join (select t_opbkk_claim.t_visit_id,t_opbkk_claim.claim_code 
-										from t_opbkk_claim
-									inner join (select t_visit_id,max(record_datetime) as max_date from t_opbkk_claim group by t_visit_id) 
-									cut_vn_dup on t_opbkk_claim.record_datetime = cut_vn_dup.max_date ) t_opbkk_claim on t_visit.t_visit_id = t_opbkk_claim.t_visit_id  -- cut visit_id dup in table claimcode
-                     left join (select t_visit_primary_symptom.t_visit_id as t_visit_id,array_to_string(array_agg(t_visit_primary_symptom.visit_primary_symptom_main_symptom),' , ') as main_symptom
+                    left join (select t_visit_primary_symptom.t_visit_id as t_visit_id
+                                      ,array_to_string(array_agg(t_visit_primary_symptom.visit_primary_symptom_main_symptom),' , ') as main_symptom
                                 from  t_visit_primary_symptom
                                 where t_visit_primary_symptom.visit_primary_symptom_active = '1'
                                 group by t_visit_primary_symptom.t_visit_id) as symptom   on t_visit.t_visit_id = symptom.t_visit_id,
                    b_site
                 WHERE   t_visit.f_visit_status_id = '3'--1=เข้าสู่กระบวนการ, 2=ค้างบันทึก, 3=จบกระบวนการ, 4=ยกเลิกการเข้ารับบริการ
                       and t_visit_payment.visit_payment_active='1'
-                      and t_person.active = '1'
-                      --and t_visit.visit_vn ='06400204'
-                      AND t_visit.visit_begin_visit_time::date between '2020-01-01'::date and '2020-01-10'::date 
-                 --  {0} {1}
+                      and t_health_family.health_family_active = '1'
+                      --and t_visit.visit_vn ='0606009340'
+                     and substring(t_visit.visit_begin_visit_time,1,10) between {0} and {1}
+                   --{0} {1}
                 ) sq
-                --where sq.optype <>'99' -- ใช้งานส่งให้ต๋ง ได้ โดยเอาเฉพาะที่อยู่ใน Case optype เท่านั้นหากเป็น = 99 จะเป็นข้อมูลที่ไม่อยู่ในเงื่อนไขของ OPBKK CLAIM
-) qr1
+       ) qr1
 ORDER  BY  qr1.HN,qr1.CLINIC,qr1.DATEOPD
-----opd 22/09/2560 14:33
-----22/09/2560 14:33 แก้ไขเพิ่ม เงื่อนไข ให้ t_diag_icd10.diag_icd10_active = '1'
-----28/11/2560 12:33 เพิ่ม btemp,sbp,dbp,pr,rr
-----19/01/2561 11:15 แก้ไข btemp,sbp,dbp,pr,rr ให้ดึง v/s มาหมด
-----23/06/2562 18.37 แก้ไข OPTYPE5 Dental yaya
-----opd 30/10/2563 14:33 by eakachai > add field claim_code 
-----opd 11/11/2563 14:33 by eakachai > add Cut cancle claimcode
-----opd 11/01/2564 by yaya cancel claim_code is not null
--- opd 22/06/2564 by eakachai get all row table claimcode
--- opd 29/07/2564 by eakachai add colunm  btemp,sbp,dbp,pr,rr (colunm hide)

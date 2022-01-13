@@ -3,6 +3,7 @@ from configparser import ConfigParser
 import os
 from pathlib import Path
 
+
 class DataBase:
     def __init__(self):
         self.config_object = ConfigParser()
@@ -15,7 +16,18 @@ class DataBase:
         self.password = self.serverinfo["passwd"]
 
     def export(self, file, dateform, dateto , dir):
+
         dateto_format = str(dateto.strftime("%y%m"))
+
+        formatDateForm =  str(dateform.strftime("%m-%d"))
+        formatDateTo = str(dateto.strftime("%m-%d"))
+
+        yearForm = str(int(dateform.strftime("%Y")) + 543)
+        yearDateTo = str(int(dateto.strftime("%Y")) + 543)
+
+        dateFormBuda = "{}-{}".format(yearForm, formatDateForm)
+        dateToBuda = "{}-{}".format(yearDateTo, formatDateTo)
+
 
         # with open("sql\{}.sql".format(file), mode="r", encoding="utf8") as f:
             # sql = f.read()
@@ -29,9 +41,7 @@ class DataBase:
         with open(file_to_open, mode="r", encoding="utf8") as f:
             sql = f.read()
 
-            # print(sql.format("'" + str(dateform) + "'", "'" + str(dateto) + "'"))
-
-            paramInSQL = sql.format("'" + str(dateform) + "'", "'" + str(dateto) + "'")
+            paramInSQL = sql.format("'" + str(dateFormBuda) + "'", "'" + str(dateToBuda) + "'")
 
 
         connection = psycopg2.connect(user=self.user, password=self.password, host=self.host, port=self.port,
