@@ -1,4 +1,4 @@
---INS ผู้มีสิทธิการรักษาพยาบาล
+--INS ผู้มีสิทธิการรักษาพยาบาล v1.0
 select t_visit.visit_hn as "HN",
        r_rp1853_instype.maininscl AS "INSCL",  
        b_contract_plans.r_rp1853_instype_id AS "SUBTYPE"
@@ -56,7 +56,7 @@ where t_visit.f_visit_status_id ='3'--1=เข้าสู่กระบวน�
       and ((t_order.f_order_status_id <> '0') and (t_order.f_order_status_id <> '3')) 
       and t_visit_payment.visit_payment_active='1'
 --      and t_visit.visit_vn='050000013'      
-      and substring(t_visit.visit_begin_visit_time,1,10) between '2564-10-01' and '2564-10-05'
+      and substring(t_visit.visit_begin_visit_time,1,10) between {0} and {1}
 GROUP BY t_visit.visit_hn
 ,r_rp1853_instype.maininscl
 ,b_contract_plans.r_rp1853_instype_id

@@ -43,17 +43,16 @@ class DataBase:
 
             paramInSQL = sql.format("'" + str(dateFormBuda) + "'", "'" + str(dateToBuda) + "'")
 
+        # print(paramInSQL)
 
         connection = psycopg2.connect(user=self.user, password=self.password, host=self.host, port=self.port,
                                       database=self.dbname)
-        # cursor = connection.cursor()
-        # cursor.execute(sql, {'_dateform': dateform, '_dateto': dateto})
-        # updated_rows = cursor.fetchall()
 
         db_cursor = connection.cursor()
 
         # Use the COPY function on the SQL we created above.
         SQL_for_file_output = "COPY ({0}) TO STDOUT WITH DELIMITER '|' CSV HEADER null as E' '".format(paramInSQL)
+
         # Set up a variable to store our file path and name.
         t_path_n_file = dir + "/" + file + dateto_format + ".txt"
 
