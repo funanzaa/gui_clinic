@@ -1,0 +1,8 @@
+INSERT INTO public.r_rp1253_charitem(id, "name")
+VALUES('ADP3', 'ค่าบริการอื่นๆ ที่ยังไม่ได้จัดหมวด ADP'),
+('ADP1', 'HC (OPD) ADP'),
+('ADP4', 'ค่าส่งเสริมป้องกัน/ยริการเฉพาะ ADP'),
+('ADP5', 'Project code (ADP)'),
+('ADP6', 'การรักษามะเร็งตามโปรโตคอล (ADP)'),
+('ADP7', 'การรักษาโรคมะเร็งด้วยรังสีวัทยา (ADP)'),
+('ADP8', 'OP REFER และ รายการ Fee Schedule (ADP)');
